@@ -1,0 +1,17 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{5886C013-4AEB-AF41-7498-D6BCA8D3A9C7}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "ArshDemo",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"UMG"
+			]
+		}
+	]
+}
