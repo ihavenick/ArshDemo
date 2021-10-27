@@ -3,6 +3,8 @@
 #include "ArshDemoCharacter.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "HealthBarWidget.h"
+#include "HealthComponent.h"
+#include "ProjectileActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -25,7 +27,7 @@ AArshDemoCharacter::AArshDemoCharacter()
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
 	BaseLookUpRate = 45.f;
-	Health = 100;
+	bDead = false;
 	
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -38,6 +40,8 @@ AArshDemoCharacter::AArshDemoCharacter()
 	HealthBar->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	HealthBar->SetRelativeTransform(FTransform(FQuat(0,0,0,0),FVector(0,0,100),FVector(0,0.235f,0.0325f)));
 
+	HealthComp = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComp"));
+	
 	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
@@ -54,10 +58,14 @@ AArshDemoCharacter::AArshDemoCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	AttackMontage = LoadObject<UAnimMontage>(AttackMontage,TEXT("/Game/Mannequin/Animations/AttackAnim.AttackAnim"));
 	
 	//HealthBarWidget->create
 	bReplicates = true;
 }
+
+
 
 //////////////////////////////////////////////////////////////////////////
 // Input
@@ -66,6 +74,8 @@ void AArshDemoCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
+	PlayerInputComponent->BindAction("Shoot", IE_Pressed, this, &AArshDemoCharacter::Shoot);
+	
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
@@ -88,18 +98,87 @@ void AArshDemoCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AArshDemoCharacter::OnResetVR);
 }
 
+void AArshDemoCharacter::ServerShoot_Implementation()
+{
+	MulticastPlayMontage();
+}
+
+bool AArshDemoCharacter::ServerShoot_Validate()
+{
+	return true;
+}
+
+void AArshDemoCharacter::SpawnProjectile()
+{
+	if (!HasAuthority())
+	{
+		ServerSpawnProjectile();
+	}
+	else
+	{
+		UWorld* const World = GetWorld();
+		if (World != nullptr)
+		{
+		
+			const FRotator SpawnRotation = GetMesh()->GetSocketRotation(FName("ShootLocation"));
+			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+			const FVector SpawnLocation = GetMesh()->GetSocketLocation(FName("ShootLocation"));
+
+			//Set Spawn Collision Handling Override
+			FActorSpawnParameters ActorSpawnParams;
+			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+
+			// spawn the projectile at the muzzle
+			World->SpawnActor<AProjectileActor>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+		}
+	}
+
+	
+}
+
+void AArshDemoCharacter::ServerSpawnProjectile_Implementation()
+{
+	SpawnProjectile();
+}
+
+bool AArshDemoCharacter::ServerSpawnProjectile_Validate()
+{
+	return true;
+}
+
+void AArshDemoCharacter::Shoot()
+{
+	if (!HasAuthority())
+    {
+	    ServerShoot();
+    }
+	
+	if(!GetCurrentMontage())
+	{
+		PlayAnimMontage(AttackMontage,1);
+	}
+	
+}
+
+void AArshDemoCharacter::MulticastPlayMontage_Implementation()
+{
+	PlayAnimMontage(AttackMontage,1);
+}
+
 void AArshDemoCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	HealthComp->OnHealthChanged.AddDynamic(this, &AArshDemoCharacter::OnHealthChanged);
+	
 	HealthBar->InitWidget();
 	const auto HealBarUserWidget = Cast<UHealthBarWidget>(HealthBar->GetUserWidgetObject());
 	if (HealBarUserWidget)
 	{
 		HealBarUserWidget->GetHealthBar()->PercentDelegate.BindUFunction(this, FName("GetHealthPercent"));
-		//HealBarUserWidget->SetColorGreen();
-		
 	}
+	
+	//GetWorldTimerManager().SetTimer(FTH_Team, this, &AArshDemoCharacter::MakeEnemyBarsDifferent, 4.f);
 }
 
 void AArshDemoCharacter::Tick(float DeltaSeconds)
@@ -115,19 +194,34 @@ void AArshDemoCharacter::Tick(float DeltaSeconds)
 	
 }
 
-float AArshDemoCharacter::GetHealth() const
-{
-	return Health;
-}
-
 float AArshDemoCharacter::GetHealthPercent()
 {
-	
-	return Health / 100;
+	return HealthComp->GetHealth() / 100;
 }
+
+void AArshDemoCharacter::OnHealthChanged(UHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType,
+	class AController* InstigatedBy, AActor* DamageCauser)
+{
+	if (Health <= 0.0f && !bDead)
+	{
+		// Die!
+		bDead = true;
+
+		GetMovementComponent()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		DetachFromControllerPendingDestroy();
+
+		SetLifeSpan(10.0f);
+	}
+}
+
+
 
 void AArshDemoCharacter::MakeEnemyBarsDifferent()
 {
+	//GetWorldTimerManager().ClearTimer(FTH_Team);
+
 	TArray<AActor*> Characters;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), StaticClass(),Characters);
 
@@ -149,11 +243,12 @@ void AArshDemoCharacter::MakeEnemyBarsDifferent()
 
 void AArshDemoCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	DOREPLIFETIME(AArshDemoCharacter, Health);
-	DOREPLIFETIME(AArshDemoCharacter, Team);
-	//DOREPLIFETIME(AArshDemoCharacter, Team,Health);
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AArshDemoCharacter, Team);
+	DOREPLIFETIME(AArshDemoCharacter, bDead);
 }
+
 
 
 void AArshDemoCharacter::OnResetVR()
@@ -176,6 +271,7 @@ void AArshDemoCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Loc
 {
 		StopJumping();
 }
+
 
 void AArshDemoCharacter::TurnAtRate(float Rate)
 {

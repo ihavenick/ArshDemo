@@ -7,6 +7,7 @@
 #include "GameFramework/Character.h"
 #include "ArshDemoCharacter.generated.h"
 
+class UHealthComponent;
 class UWidgetComponent;
 class TeamsEnum;
 
@@ -14,10 +15,8 @@ UCLASS(config=Game)
 class AArshDemoCharacter : public ACharacter
 {
 	GENERATED_BODY()
-
-	UPROPERTY(Replicated)
-	float Health;
-
+	
+	FTimerHandle FTH_Team;
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
@@ -37,7 +36,20 @@ public:
 	float BaseLookUpRate;
 
 protected:
-
+	/** Projectile class to spawn */
+	UPROPERTY(EditDefaultsOnly, Category=Projectile)
+	TSubclassOf<class AProjectileActor> ProjectileClass;
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerShoot();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSpawnProjectile();
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category ="CombatVariables")
+	UAnimMontage* AttackMontage;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UHealthComponent* HealthComp;
+	
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();
 
@@ -65,20 +77,31 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
-protected:
+	UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayMontage();
+	
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	void Shoot();
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	float GetHealth() const;
 	// End of APawn interface
 
 public:
+	UFUNCTION(BlueprintCallable)
+	void SpawnProjectile();
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "Team")
 	ETeamsEnum Team;
-
+	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite, Category="Health")
+	bool bDead;
+	
 	UFUNCTION(Category = "Health")
 	float GetHealthPercent();
+	void OnHealthChanged(UHealthComponent* OwningHealthComp, float Health, float HealthDelta,
+	                     const UDamageType* DamageType,
+	                     AController* InstigatedBy, AActor* DamageCauser);
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void MakeEnemyBarsDifferent();

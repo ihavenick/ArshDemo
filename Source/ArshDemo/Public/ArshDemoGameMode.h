@@ -8,6 +8,7 @@
 #include "GameFramework/PlayerStart.h"
 #include "ArshDemoGameMode.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnActorKilled, AActor*, VictimActor, AActor*, KillerActor, AController*, KillerController);
 
 UCLASS(minimalapi)
 class AArshDemoGameMode : public AGameModeBase
@@ -30,7 +31,8 @@ public:
 	AArshDemoGameMode();
 
 
-	
+	UPROPERTY(BlueprintAssignable, Category = "GameMode")
+	FOnActorKilled OnActorKilled;
 };
 
 
