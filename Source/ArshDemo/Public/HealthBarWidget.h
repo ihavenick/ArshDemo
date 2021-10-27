@@ -15,6 +15,7 @@ class ARSHDEMO_API UHealthBarWidget : public UUserWidget
 	GENERATED_BODY()
 
 private:
+	bool Green;
 	UPROPERTY(meta = (BindWidget))
 	class UProgressBar *HealthBar;
 	virtual void NativeConstruct() override;

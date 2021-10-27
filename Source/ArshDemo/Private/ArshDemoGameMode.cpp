@@ -19,9 +19,6 @@ AArshDemoGameMode::AArshDemoGameMode()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
-
-
-	
 }
 
 
@@ -50,22 +47,6 @@ void AArshDemoGameMode::PostLogin(APlayerController* NewPlayer)
 	//Pawn->MakeEnemyBarsDifferent();
 }
 
-AActor* AArshDemoGameMode::ChoosePlayerStart_Implementation(AController* Player)
-{
-	
-	// if (TeamA.Contains(Player->GetUniqueID()))
-	// {
-	// 	int32 Random = FMath::RandRange(0,TeamAStart.Num()-1);
-	// 	return TeamAStart[Random];	
-	// }
-	// else if (TeamB.Contains(Player->GetUniqueID()))
-	// {
-	// 	int32 Random = FMath::RandRange(0,TeamBStart.Num()-1);
-	// 	return TeamBStart[Random];
-	// }
-	// UE_LOG(LogTemp, Warning, TEXT("%d ID li oyuncuyu biryere sokamadık"),Player->GetUniqueID());
-	return Super::ChoosePlayerStart_Implementation(Player);
-}
 
 void AArshDemoGameMode::BeginPlay()
 {
@@ -85,7 +66,7 @@ void AArshDemoGameMode::BeginPlay()
 				TeamBStart.Add(PlayerStart);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("A takımı %d Spawn noktası var , B takımının %d spawn noktası var"),TeamAStart.Num(),TeamBStart.Num());
+	UE_LOG(LogTemp, Warning, TEXT("A team has %d Spawnpoint , B team has %d spawnpoint"),TeamAStart.Num(),TeamBStart.Num());
 }
 
 
@@ -108,12 +89,12 @@ AActor* AArshDemoGameMode::FindPlayerStart_Implementation(AController* Player, c
 
 	if (TeamA.Contains(Player->GetUniqueID()))
 	{
-		int32 Random = FMath::RandRange(0,TeamAStart.Num()-1);
+		const int32 Random = FMath::RandRange(0,TeamAStart.Num()-1);
 		return TeamAStart[Random];	
 	}
 	else if (TeamB.Contains(Player->GetUniqueID()))
 	{
-		int32 Random = FMath::RandRange(0,TeamBStart.Num()-1);
+		const int32 Random = FMath::RandRange(0,TeamBStart.Num()-1);
 		return TeamBStart[Random];
 	}
 	UE_LOG(LogTemp, Warning, TEXT("%d ID li oyuncuyu biryere sokamadık"),Player->GetUniqueID());

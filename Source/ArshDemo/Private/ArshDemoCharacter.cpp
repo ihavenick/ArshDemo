@@ -32,6 +32,12 @@ AArshDemoCharacter::AArshDemoCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
+	HealthBar = CreateDefaultSubobject<UWidgetComponent>(FName("HealthBar"));
+	static ConstructorHelpers::FClassFinder<UUserWidget> MenuWidgetClassFinder(TEXT("/Game/Core/UI/UI_HealthBar"));
+	HealthBar->SetWidgetClass(MenuWidgetClassFinder.Class);
+	HealthBar->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	HealthBar->SetRelativeTransform(FTransform(FQuat(0,0,0,0),FVector(0,0,100),FVector(0,0.235f,0.0325f)));
+
 	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
@@ -48,12 +54,7 @@ AArshDemoCharacter::AArshDemoCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-
-	HealthBar = CreateDefaultSubobject<UWidgetComponent>(FName("HealthBar"));
-	static ConstructorHelpers::FClassFinder<UUserWidget> MenuWidgetClassFinder(TEXT("/Game/Core/UI/UI_HealthBar"));
-	HealthBar->SetWidgetClass(MenuWidgetClassFinder.Class);
-	HealthBar->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-	HealthBar->SetRelativeTransform(FTransform(FQuat(0,0,0,0),FVector(0,0,100),FVector(0,0.235f,0.0325f)));
+	
 	//HealthBarWidget->create
 	bReplicates = true;
 }
@@ -92,10 +93,24 @@ void AArshDemoCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	HealthBar->InitWidget();
-	auto HealBarUserWidget = Cast<UHealthBarWidget>(HealthBar->GetUserWidgetObject());
+	const auto HealBarUserWidget = Cast<UHealthBarWidget>(HealthBar->GetUserWidgetObject());
 	if (HealBarUserWidget)
 	{
 		HealBarUserWidget->GetHealthBar()->PercentDelegate.BindUFunction(this, FName("GetHealthPercent"));
+		//HealBarUserWidget->SetColorGreen();
+		
+	}
+}
+
+void AArshDemoCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if(HealthBar)
+	{
+		FRotator CameraRotation = UGameplayStatics::GetPlayerCameraManager(GetWorld(),0)->GetCameraRotation();
+		CameraRotation.Yaw-=180;
+		HealthBar->SetWorldRotation(CameraRotation);
 	}
 	
 }
@@ -107,10 +122,11 @@ float AArshDemoCharacter::GetHealth() const
 
 float AArshDemoCharacter::GetHealthPercent()
 {
+	
 	return Health / 100;
 }
 
-void AArshDemoCharacter::MakeEnemyBarsDifferent() const
+void AArshDemoCharacter::MakeEnemyBarsDifferent()
 {
 	TArray<AActor*> Characters;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), StaticClass(),Characters);
@@ -123,7 +139,8 @@ void AArshDemoCharacter::MakeEnemyBarsDifferent() const
 			if (Team==Pawn->Team)
 			{
 				auto OthersBar = Cast<UHealthBarWidget>(Pawn->HealthBar->GetUserWidgetObject());
-				OthersBar->SetColorGreen();
+				if (OthersBar)
+					OthersBar->SetColorGreen();
 			}
 			
 		}
@@ -188,7 +205,7 @@ void AArshDemoCharacter::MoveForward(float Value)
 
 void AArshDemoCharacter::MoveRight(float Value)
 {
-	
+	MakeEnemyBarsDifferent();
 	if ( (Controller != nullptr) && (Value != 0.0f) )
 	{
 		// find out which way is right

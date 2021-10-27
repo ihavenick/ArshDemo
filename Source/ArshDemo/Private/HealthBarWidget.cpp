@@ -13,11 +13,10 @@ void UHealthBarWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	HealthBar->SetFillColorAndOpacity(FLinearColor::Red);
-	// HealthBar->PercentDelegate.BindUFunction(this, "GetHealthPercentage");
-	// HealthBar->SynchronizeProperties();
 }
 
 void UHealthBarWidget::SetColorGreen()
 {
-	HealthBar->SetFillColorAndOpacity(FLinearColor::Green);
+	if (HealthBar)
+		HealthBar->SetFillColorAndOpacity(FLinearColor::Green);
 }

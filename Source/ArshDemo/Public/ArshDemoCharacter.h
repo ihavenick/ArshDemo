@@ -69,6 +69,7 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	float GetHealth() const;
 	// End of APawn interface
 
@@ -80,7 +81,7 @@ public:
 	float GetHealthPercent();
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
-	void MakeEnemyBarsDifferent() const;
+	void MakeEnemyBarsDifferent();
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
