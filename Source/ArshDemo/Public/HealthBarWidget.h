@@ -21,4 +21,7 @@ private:
 	
 public:
 	FORCEINLINE class UProgressBar *GetHealthBar() { return HealthBar; }
+
+	UFUNCTION()
+	void SetColorGreen();
 };

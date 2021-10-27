@@ -11,6 +11,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AArshDemoCharacter
@@ -53,6 +55,7 @@ AArshDemoCharacter::AArshDemoCharacter()
 	HealthBar->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	HealthBar->SetRelativeTransform(FTransform(FQuat(0,0,0,0),FVector(0,0,100),FVector(0,0.235f,0.0325f)));
 	//HealthBarWidget->create
+	bReplicates = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,6 +97,7 @@ void AArshDemoCharacter::BeginPlay()
 	{
 		HealBarUserWidget->GetHealthBar()->PercentDelegate.BindUFunction(this, FName("GetHealthPercent"));
 	}
+	
 }
 
 float AArshDemoCharacter::GetHealth() const
@@ -104,6 +108,34 @@ float AArshDemoCharacter::GetHealth() const
 float AArshDemoCharacter::GetHealthPercent()
 {
 	return Health / 100;
+}
+
+void AArshDemoCharacter::MakeEnemyBarsDifferent() const
+{
+	TArray<AActor*> Characters;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), StaticClass(),Characters);
+
+	for (AActor* FoundActor : Characters)
+	{
+		AArshDemoCharacter* Pawn = Cast<AArshDemoCharacter>(FoundActor);
+		if (Pawn)
+		{
+			if (Team==Pawn->Team)
+			{
+				auto OthersBar = Cast<UHealthBarWidget>(Pawn->HealthBar->GetUserWidgetObject());
+				OthersBar->SetColorGreen();
+			}
+			
+		}
+	}
+}
+
+void AArshDemoCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	DOREPLIFETIME(AArshDemoCharacter, Health);
+	DOREPLIFETIME(AArshDemoCharacter, Team);
+	//DOREPLIFETIME(AArshDemoCharacter, Team,Health);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
 
@@ -156,6 +188,7 @@ void AArshDemoCharacter::MoveForward(float Value)
 
 void AArshDemoCharacter::MoveRight(float Value)
 {
+	
 	if ( (Controller != nullptr) && (Value != 0.0f) )
 	{
 		// find out which way is right

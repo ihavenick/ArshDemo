@@ -47,6 +47,7 @@ void AArshDemoGameMode::PostLogin(APlayerController* NewPlayer)
 		UE_LOG(LogTemp, Warning, TEXT("Assinged Pawn to Team B"));
 	}
 
+	//Pawn->MakeEnemyBarsDifferent();
 }
 
 AActor* AArshDemoGameMode::ChoosePlayerStart_Implementation(AController* Player)

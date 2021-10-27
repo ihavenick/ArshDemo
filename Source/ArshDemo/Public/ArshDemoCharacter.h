@@ -15,6 +15,7 @@ class AArshDemoCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+	UPROPERTY(Replicated)
 	float Health;
 
 	/** Camera boom positioning the camera behind the character */
@@ -72,12 +73,16 @@ protected:
 	// End of APawn interface
 
 public:
-	UPROPERTY(EditAnywhere, Category = "Team")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "Team")
 	ETeamsEnum Team;
 
 	UFUNCTION(Category = "Health")
 	float GetHealthPercent();
 
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void MakeEnemyBarsDifferent() const;
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UWidgetComponent *HealthBar{nullptr};
