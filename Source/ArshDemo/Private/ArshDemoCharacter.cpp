@@ -118,13 +118,8 @@ void AArshDemoCharacter::SpawnProjectile()
 		{
 			FRotator SpawnRotation;
 			FVector SpawnLocation;;
-			
 			TargetPoint->GetSocketWorldLocationAndRotation("",SpawnLocation,SpawnRotation);
-		
 			SpawnRotation = GetFollowCamera()->GetComponentRotation();
-			//SpawnLocation.X += 100;
-			//SpawnLocation.Z += 60;
-			//Set Spawn Collision Handling Override
 			FActorSpawnParameters ActorSpawnParams;
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 
@@ -176,9 +171,6 @@ void AArshDemoCharacter::BeginPlay()
 	{
 		HealBarUserWidget->GetHealthBar()->PercentDelegate.BindUFunction(this, FName("GetHealthPercent"));
 	}
-	
-	//GetWorldTimerManager().SetTimer(FTH_Team, this, &AArshDemoCharacter::MakeEnemyBarsDifferent, 4.f);
-
 	HealthComp->OnHealthChanged.AddUniqueDynamic(this, &AArshDemoCharacter::OnHealthChanged);
 	
 }
@@ -234,12 +226,7 @@ void AArshDemoCharacter::OnHealthChanged(UHealthComponent* OwningHealthComp, flo
 	if (Health <= 0.0f && !bDead)
 	{
 		bDead = true;
-		
 		GetMovementComponent()->StopMovementImmediately();
-		//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-		//DetachFromControllerPendingDestroy();
-		
 		Ragdoll();
 		
 		//SetLifeSpan(10.0f);
@@ -247,10 +234,8 @@ void AArshDemoCharacter::OnHealthChanged(UHealthComponent* OwningHealthComp, flo
 }
 
 
-
 void AArshDemoCharacter::MakeEnemyBarsDifferent()
 {
-	//GetWorldTimerManager().ClearTimer(FTH_Team);
 
 	TArray<AActor*> Characters;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), StaticClass(),Characters);
@@ -276,7 +261,6 @@ void AArshDemoCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AArshDemoCharacter, Team);
-	//DOREPLIFETIME(AArshDemoCharacter, ControllRotation);
 	DOREPLIFETIME_CONDITION(AArshDemoCharacter, ControllRotation, COND_SkipOwner);
 	DOREPLIFETIME(AArshDemoCharacter, bDead);
 }
@@ -285,23 +269,17 @@ void AArshDemoCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 void AArshDemoCharacter::OnResetVR()
 {
-	// If ArshDemo is added to a project via 'Add Feature' in the Unreal Editor the dependency on HeadMountedDisplay in ArshDemo.Build.cs is not automatically propagated
-	// and a linker error will result.
-	// You will need to either:
-	//		Add "HeadMountedDisplay" to [YourProject].Build.cs PublicDependencyModuleNames in order to build successfully (appropriate if supporting VR).
-	// or:
-	//		Comment or delete the call to ResetOrientationAndPosition below (appropriate if not supporting VR)
 	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
 }
 
 void AArshDemoCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
-		Jump();
+	Jump();
 }
 
 void AArshDemoCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
-		StopJumping();
+	StopJumping();
 }
 
 
