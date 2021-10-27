@@ -108,10 +108,14 @@ public:
 	void GetControllerRotationReplicated();
 	
 	UFUNCTION(Category = "Health")
-	float GetHealthPercent();
-	void OnHealthChanged(UHealthComponent* OwningHealthComp, float Health, float HealthDelta,
-	                     const UDamageType* DamageType,
-	                     AController* InstigatedBy, AActor* DamageCauser);
+	float GetHealthPercent() const;
+	UFUNCTION(NetMulticast, Reliable)
+	void Ragdoll();
+
+
+	UFUNCTION()
+	void OnHealthChanged(UHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void MakeEnemyBarsDifferent();

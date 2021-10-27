@@ -22,15 +22,23 @@ private:
 	TArray<APlayerStart*> TeamAStart;
 	TArray<APlayerStart*> TeamBStart;
 
+	TArray<AController*> DeadPlayers;
+	FTimerHandle DeadTimer;
+
 protected:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void BeginPlay() override;
 	virtual AActor* FindPlayerStart_Implementation(AController* Player, const FString& IncomingName) override;
+	
+	
 
 public:
 	AArshDemoGameMode();
-
-
+	UFUNCTION(BlueprintCallable)
+	void Respawn();
+	UFUNCTION()
+		void RestartPlayerwithTimer(AController* Controller);
+	void AddPawnTeamInfo(AController* Controller);
 	UPROPERTY(BlueprintAssignable, Category = "GameMode")
 	FOnActorKilled OnActorKilled;
 };

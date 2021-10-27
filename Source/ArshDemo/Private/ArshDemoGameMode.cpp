@@ -2,7 +2,7 @@
 
 #include "ArshDemoGameMode.h"
 
-#include <string>
+#include "Engine.h"
 
 #include "ArshDemoCharacter.h"
 #include "GameFramework/PlayerStart.h"
@@ -26,25 +26,7 @@ void AArshDemoGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-	AArshDemoCharacter* Pawn = Cast<AArshDemoCharacter>(NewPlayer->GetPawn());
-
-	if (!Pawn)
-		UE_LOG(LogTemp, Warning, TEXT("Pawn bok yolu"));
-	
-	if (TeamA.Contains(NewPlayer->GetUniqueID()))
-	{
-		Pawn->Team = ETeamsEnum::ETeam_A;
-		Pawn->Tags.Add(FName("TeamA"));
-		UE_LOG(LogTemp, Warning, TEXT("Assinged Pawn to Team A"));
-	}
-	else
-	{
-		Pawn->Team = ETeamsEnum::ETeam_B;
-		Pawn->Tags.Add(FName("TeamB"));
-		UE_LOG(LogTemp, Warning, TEXT("Assinged Pawn to Team B"));
-	}
-
-	//Pawn->MakeEnemyBarsDifferent();
+	AddPawnTeamInfo(NewPlayer);
 }
 
 
@@ -60,10 +42,13 @@ void AArshDemoGameMode::BeginPlay()
 	{
 		APlayerStart* PlayerStart = Cast<APlayerStart>(FoundActor);
 		if (PlayerStart)
-			if (PlayerStart->PlayerStartTag.Compare(FName("TeamA")))
-				TeamAStart.Add(PlayerStart);
-			else if (PlayerStart->PlayerStartTag.Compare(FName("TeamB")))
-				TeamBStart.Add(PlayerStart);
+		{
+			if (PlayerStart->PlayerStartTag == FName("TeamA"))
+				TeamAStart.Push(PlayerStart);
+			else if (PlayerStart->PlayerStartTag== FName("TeamB"))
+				TeamBStart.Push(PlayerStart);
+		}
+			
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("A team has %d Spawnpoint , B team has %d spawnpoint"),TeamAStart.Num(),TeamBStart.Num());
@@ -101,4 +86,63 @@ AActor* AArshDemoGameMode::FindPlayerStart_Implementation(AController* Player, c
 	
 	
 	return Super::FindPlayerStart_Implementation(Player, IncomingName);
+}
+
+void AArshDemoGameMode::RestartPlayerwithTimer(AController* Controller)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%d ID li oyuncuyu canlandirma sirasina ekledik"),Controller->GetUniqueID());
+	RestartPlayer(Controller);
+
+	DeadPlayers.Add(Controller);
+	GetWorldTimerManager().SetTimer(DeadTimer, this, &AArshDemoGameMode::Respawn, 4.f);
+}
+
+void AArshDemoGameMode::AddPawnTeamInfo(AController* Controller)
+{
+	AArshDemoCharacter* Pawn = Cast<AArshDemoCharacter>(Controller->GetPawn());
+	
+	if (TeamA.Contains(Controller->GetUniqueID()))
+	{
+		Pawn->Team = ETeamsEnum::ETeam_A;
+		Pawn->Tags.Add(FName("TeamA"));
+		UE_LOG(LogTemp, Warning, TEXT("Assinged Pawn to Team A"));
+	}
+	else
+	{
+		Pawn->Team = ETeamsEnum::ETeam_B;
+		Pawn->Tags.Add(FName("TeamB"));
+		UE_LOG(LogTemp, Warning, TEXT("Assinged Pawn to Team B"));
+	}
+}
+
+void AArshDemoGameMode::Respawn()
+{
+	for (auto DeadPlayer : DeadPlayers)
+	{
+		AController* Controller = DeadPlayer;
+		APawn* pawn = nullptr;
+	
+		if (TeamA.Contains(Controller->GetUniqueID()))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%d ID li oyuncuyu A takiminda canlandiriyoz"),Controller->GetUniqueID());
+			const int32 Random = FMath::RandRange(0,TeamAStart.Num()-1);
+			RestartPlayerAtPlayerStart(Controller ,TeamAStart[Random]);
+			//pawn = SpawnDefaultPawnFor(Controller,TeamAStart[0]);
+		}
+		else if (TeamB.Contains(Controller->GetUniqueID()))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%d ID li oyuncuyu B takiminda canlandiriyoz"),Controller->GetUniqueID());
+			const int32 Random = FMath::RandRange(0,TeamBStart.Num()-1);
+			RestartPlayerAtPlayerStart(Controller ,TeamBStart[Random]);
+			//pawn = SpawnDefaultPawnFor(Controller,TeamBStart[0]);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%d ID li oyuncuyu GG Takimsiz kaldi"),Controller->GetUniqueID());
+		}
+
+		AddPawnTeamInfo(Controller);
+		DeadPlayers.Remove(DeadPlayer);
+	}
+	//Controller->Possess(pawn);
 }

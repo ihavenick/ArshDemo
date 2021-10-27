@@ -65,29 +65,6 @@ AArshDemoCharacter::AArshDemoCharacter()
 	bReplicates = true;
 }
 
-// float AArshDemoCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
-// 	AActor* DamageCauser)
-// {
-// 	AArshDemoCharacter* Pawn = Cast<AArshDemoCharacter>(DamageCauser);
-// 	if (Pawn)
-// 	{
-// 		if (Pawn==this||Pawn->Team==Team)
-// 		{
-// 		  return 0;
-// 		}
-//
-// 		HealthComp->Heal(-DamageAmount);
-// 		
-// 	}
-// 	
-// 	
-// 	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-// }
-
-
-//////////////////////////////////////////////////////////////////////////
-// Input
-
 void AArshDemoCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
@@ -181,7 +158,6 @@ void AArshDemoCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	HealthComp->OnHealthChanged.AddDynamic(this, &AArshDemoCharacter::OnHealthChanged);
 	
 	HealthBar->InitWidget();
 	const auto HealBarUserWidget = Cast<UHealthBarWidget>(HealthBar->GetUserWidgetObject());
@@ -191,6 +167,9 @@ void AArshDemoCharacter::BeginPlay()
 	}
 	
 	//GetWorldTimerManager().SetTimer(FTH_Team, this, &AArshDemoCharacter::MakeEnemyBarsDifferent, 4.f);
+
+	HealthComp->OnHealthChanged.AddUniqueDynamic(this, &AArshDemoCharacter::OnHealthChanged);
+	
 }
 
 void AArshDemoCharacter::Tick(float DeltaSeconds)
@@ -206,25 +185,53 @@ void AArshDemoCharacter::Tick(float DeltaSeconds)
 	GetControllerRotationReplicated();
 }
 
-float AArshDemoCharacter::GetHealthPercent()
+float AArshDemoCharacter::GetHealthPercent() const
 {
 	return HealthComp->GetHealth() / 100;
 }
+
+void AArshDemoCharacter::Ragdoll_Implementation()
+{
+	USkeletalMeshComponent* mesh = GetMesh();
+	UCharacterMovementComponent* cm = GetCharacterMovement();
+	UCapsuleComponent* UCC = GetCapsuleComponent();
+
+	UCC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	cm->SetMovementMode(MOVE_None);
+
+	mesh->SetCollisionObjectType(ECC_PhysicsBody);
+
+	mesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	mesh->SetAllBodiesSimulatePhysics(true);
+
+
+	TArray<UStaticMeshComponent*> Components;
+	
+	GetComponents<UStaticMeshComponent>(Components);
+	for( int32 i=0; i<Components.Num(); i++ )
+	{
+		UStaticMeshComponent* StaticMeshComponent = Components[i];
+		StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
+
 
 void AArshDemoCharacter::OnHealthChanged(UHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType,
 	class AController* InstigatedBy, AActor* DamageCauser)
 {
 	if (Health <= 0.0f && !bDead)
 	{
-		// Die!
 		bDead = true;
-
+		
 		GetMovementComponent()->StopMovementImmediately();
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-		DetachFromControllerPendingDestroy();
-
-		SetLifeSpan(10.0f);
+		//DetachFromControllerPendingDestroy();
+		
+		Ragdoll();
+		
+		//SetLifeSpan(10.0f);
 	}
 }
 
