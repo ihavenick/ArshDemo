@@ -36,9 +36,15 @@ public:
 	float BaseLookUpRate;
 
 protected:
+
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite)
+	FRotator ControllRotation;
+	
 	/** Projectile class to spawn */
 	UPROPERTY(EditDefaultsOnly, Category=Projectile)
 	TSubclassOf<class AProjectileActor> ProjectileClass;
+
+
 	
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerShoot();
@@ -70,6 +76,7 @@ protected:
 	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
 	 */
 	void LookUpAtRate(float Rate);
+	
 
 	/** Handler for when a touch input begins. */
 	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
@@ -91,11 +98,14 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable)
 	void SpawnProjectile();
-	
+	//virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "Team")
 	ETeamsEnum Team;
 	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite, Category="Health")
 	bool bDead;
+
+	UFUNCTION(BlueprintCallable)
+	void GetControllerRotationReplicated();
 	
 	UFUNCTION(Category = "Health")
 	float GetHealthPercent();

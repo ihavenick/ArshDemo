@@ -65,6 +65,24 @@ AArshDemoCharacter::AArshDemoCharacter()
 	bReplicates = true;
 }
 
+// float AArshDemoCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+// 	AActor* DamageCauser)
+// {
+// 	AArshDemoCharacter* Pawn = Cast<AArshDemoCharacter>(DamageCauser);
+// 	if (Pawn)
+// 	{
+// 		if (Pawn==this||Pawn->Team==Team)
+// 		{
+// 		  return 0;
+// 		}
+//
+// 		HealthComp->Heal(-DamageAmount);
+// 		
+// 	}
+// 	
+// 	
+// 	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+// }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -110,26 +128,20 @@ bool AArshDemoCharacter::ServerShoot_Validate()
 
 void AArshDemoCharacter::SpawnProjectile()
 {
-	if (!HasAuthority())
-	{
-		ServerSpawnProjectile();
-	}
-	else
+	if (HasAuthority())
 	{
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
-		
-			const FRotator SpawnRotation = GetMesh()->GetSocketRotation(FName("ShootLocation"));
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetMesh()->GetSocketLocation(FName("ShootLocation"));
-
+			FRotator SpawnRotation;
+			FVector SpawnLocation;;
+			GetMesh()->GetSocketWorldLocationAndRotation(FName("ShootLocation"),SpawnLocation, SpawnRotation);
 			//Set Spawn Collision Handling Override
 			FActorSpawnParameters ActorSpawnParams;
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 
-			// spawn the projectile at the muzzle
-			World->SpawnActor<AProjectileActor>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			if (const auto Projectile = World->SpawnActor<AProjectileActor>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams))
+				Projectile->SetDamagerOwner(this);
 		}
 	}
 
@@ -191,7 +203,7 @@ void AArshDemoCharacter::Tick(float DeltaSeconds)
 		CameraRotation.Yaw-=180;
 		HealthBar->SetWorldRotation(CameraRotation);
 	}
-	
+	GetControllerRotationReplicated();
 }
 
 float AArshDemoCharacter::GetHealthPercent()
@@ -246,6 +258,8 @@ void AArshDemoCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AArshDemoCharacter, Team);
+	//DOREPLIFETIME(AArshDemoCharacter, ControllRotation);
+	DOREPLIFETIME_CONDITION(AArshDemoCharacter, ControllRotation, COND_SkipOwner);
 	DOREPLIFETIME(AArshDemoCharacter, bDead);
 }
 
@@ -283,6 +297,14 @@ void AArshDemoCharacter::LookUpAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AArshDemoCharacter::GetControllerRotationReplicated()
+{
+	if (HasAuthority()||IsLocallyControlled())
+	{
+		ControllRotation = GetControlRotation();
+	}
 }
 
 void AArshDemoCharacter::MoveForward(float Value)
