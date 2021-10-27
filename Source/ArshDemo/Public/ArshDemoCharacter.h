@@ -21,6 +21,8 @@ class AArshDemoCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
 
+	
+	
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
@@ -36,7 +38,9 @@ public:
 	float BaseLookUpRate;
 
 protected:
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Target)
+	UArrowComponent* TargetPoint;
+	
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite)
 	FRotator ControllRotation;
 	

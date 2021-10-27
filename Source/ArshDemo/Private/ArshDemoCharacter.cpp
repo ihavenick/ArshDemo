@@ -6,6 +6,7 @@
 #include "HealthComponent.h"
 #include "ProjectileActor.h"
 #include "Camera/CameraComponent.h"
+#include "Components/ArrowComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/ProgressBar.h"
@@ -48,6 +49,11 @@ AArshDemoCharacter::AArshDemoCharacter()
 	GetCharacterMovement()->JumpZVelocity = 600.f;
 	GetCharacterMovement()->AirControl = 0.2f;
 
+    TargetPoint = CreateDefaultSubobject<UArrowComponent>(FName("TargetArrow"));
+	TargetPoint->AttachTo(GetMesh(),FName("ShootLocation"),EAttachLocation::SnapToTarget,false);
+	TargetPoint->SetHiddenInGame(true);
+    TargetPoint->SetRelativeRotation(FRotator(90,0,0),false,nullptr);
+	
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -112,7 +118,12 @@ void AArshDemoCharacter::SpawnProjectile()
 		{
 			FRotator SpawnRotation;
 			FVector SpawnLocation;;
-			GetMesh()->GetSocketWorldLocationAndRotation(FName("ShootLocation"),SpawnLocation, SpawnRotation);
+			
+			TargetPoint->GetSocketWorldLocationAndRotation("",SpawnLocation,SpawnRotation);
+		
+			SpawnRotation = GetFollowCamera()->GetComponentRotation();
+			//SpawnLocation.X += 100;
+			//SpawnLocation.Z += 60;
 			//Set Spawn Collision Handling Override
 			FActorSpawnParameters ActorSpawnParams;
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
